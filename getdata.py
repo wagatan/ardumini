@@ -3,6 +3,7 @@
 # 温度と気圧から高度を計算する
 # 2022.4.12
 # 
+#
 
 import serial
 import time
@@ -106,8 +107,11 @@ def scheduler(interval, fanc, port, csv_file, wait=True):
     next_time = 0
     
     # Serial.
+    # windows
     ser = serial.Serial(port, 115200, serial.EIGHTBITS, serial.PARITY_NONE)
-    
+    # linux
+    # ser = serial.Serial("/dev/ttyUSB0", 115200, serial.EIGHTBITS, serial.PARITY_NONE)
+
     try:
         n = 0
         while ser.isOpen():
