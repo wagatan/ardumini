@@ -160,5 +160,6 @@ if __name__ == '__main__':
 
     save_frame_camera_key(0, 'data/temp', 'camera_capture',CSV_FILE)
     print(str_time)
+    shutil.make_archive('arc_data',format='zip',root_dir=filepath)
 
 
