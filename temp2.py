@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 # 温度と気圧から高度を計算する
 # 2022.4.12
-# 
+# Windows 用
+#
+
 
 import serial
 import time
@@ -17,9 +19,10 @@ import shutil
 P = 1006
 T = 24.3
 P0 = 1013.25 # ICAO標準大気 海抜0m
-cnt = 10
-interval_time = 10
+cnt = 50
+interval_time = 1
 filepath = "data/temp"
+H0 = 0
 
 def s16(value):
     return -(value & 0x8000) | (value & 0x7fff)
@@ -43,6 +46,7 @@ def calc_crc(buf, length):
 
 
 def print_latest_data(data,csv_file):
+    global H0
     """
     print measured latest value.
     """
@@ -68,6 +72,12 @@ def print_latest_data(data,csv_file):
     H = ((P0/P) ** (1/5.257) - 1) * ( T + 273.15) / 0.0065
     # H = 153.8 * ( T + 273.2) * (1-( P / P0 ) ** 0.190223)
     high = str(H)
+    if H0 == 0:
+        H0 = H 
+        calc_high =  str(H - H0 )
+    else:
+        calc_high =  str(H - H0)
+        H0 = H
 
     print("")
     print("Time measured:" + time_measured)
@@ -85,6 +95,7 @@ def print_latest_data(data,csv_file):
     print("PGA:" + pga)
     print("Seismic intensity:" + seismic_intensity)
     print("Altitude:" + high)
+    print("Diff Altitude:" + calc_high)
     # print(data)
 
     # Output CSV
@@ -92,7 +103,7 @@ def print_latest_data(data,csv_file):
         writer = csv.writer(f)
         writer.writerow([time_measured, temperature, relative_humidity, ambient_light,
                          barometric_pressure, sound_noise, eTVOC, eCO2, discomfort_index,
-                         heat_stroke, vibration_information, si_value, pga, seismic_intensity,high])
+                         heat_stroke, vibration_information, si_value, pga, seismic_intensity,high,calc_high])
 
 def worker(ser,csv_file):
     # Get Latest data Long.
@@ -156,7 +167,7 @@ if __name__ == '__main__':
         writer = csv.writer(f)
         writer.writerow(['Time measured', 'Temperature', 'Relative humidity', 'Ambient light',
                          'Barometric pressure', 'Sound noise', 'eTVOC', 'eCO2', 'Discomfort index',
-                         'Heat stroke', 'Vibration information', 'SI value', 'PGA', 'Seismic intensity','Altitude'])
+                         'Heat stroke', 'Vibration information', 'SI value', 'PGA', 'Seismic intensity','Altitude','Diff_alt'])
 
     save_frame_camera_key(0, 'data/temp', 'camera_capture',CSV_FILE)
     print(str_time)
