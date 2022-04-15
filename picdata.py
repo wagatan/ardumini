@@ -10,10 +10,15 @@ from datetime import datetime
 import sys
 import threading
 import csv
+import cv2
+import os
+import shutil
 
 P = 1006
 T = 24.3
 P0 = 1013.25 # ICAO標準大気 海抜0m
+cnt = 10
+interval_time = 10
 
 def s16(value):
     return -(value & 0x8000) | (value & 0x7fff)
@@ -111,15 +116,16 @@ def scheduler(interval, fanc, port, csv_file, wait=True):
     ser = serial.Serial(port, 115200, serial.EIGHTBITS, serial.PARITY_NONE)
     
     try:
-        n = 0
+        n = 1
         while ser.isOpen():
             t = threading.Thread(target = fanc(ser,csv_file))
             t.start()
             if wait:
                 t.join()
             next_time = ((base_time - time.time()) % interval) or interval
-            time.sleep(next_time)
-            if n > 10:
+            # time.sleep(next_time)
+            if n > 0:
+                ser.close
                 break
             n = n + 1
 
@@ -127,25 +133,59 @@ def scheduler(interval, fanc, port, csv_file, wait=True):
         # script finish.
         sys.exit
 
+def save_frame_camera_key(device_num, dir_path, basename,CSV_FILE, ext='jpg', delay=1, window_name='frame'):
+    cap = cv2.VideoCapture(device_num)
+
+    if not cap.isOpened():
+        return
+
+    os.makedirs(dir_path, exist_ok=True)
+    base_path = os.path.join(dir_path, basename)
+
+    n = 0
+    while True:
+        ret, frame = cap.read()
+        # cv2.imshow(window_name, frame)
+        cv2.imwrite('{}_{}.{}'.format(base_path, n, ext), frame)
+
+        #パラメータ　待機秒数、接続先、出力ファイル名
+        scheduler(interval_time, worker, PORT, CSV_FILE, False)
+
+        n += 1
+        if n > cnt:
+            break
+    cv2.destroyWindow(window_name)
 
 if __name__ == '__main__':
 
     # 環境センサUSB型のシリアルポートを指定
     # Windows
     PORT = "COM6"
-    # Linux
+    # Linux scheduler
     # Serial.
     # port = serial.Serial("/dev/ttyUSB0", 115200, serial.EIGHTBITS, serial.PARITY_NONE)
+
+    filepath = "data/temp"
+    # 既存ファイルの削除
+    try:
+        shutil.rmtree(filepath)
+    except:
+        print("既存ファイル削除エラー")
+    if os.path.exists(filepath):
+        print("TEMPフォルダあり")
+    else:
+        os.mkdir(filepath) 
     
     # 出力するCSVファイル名
     str_time = str(datetime.now().strftime("%Y%m%d-%H%M%S"))
     CSV_FILE = "data/temp/" + str_time + ".csv"
-
     with open(CSV_FILE, 'w', newline="") as f:
         writer = csv.writer(f)
         writer.writerow(['Time measured', 'Temperature', 'Relative humidity', 'Ambient light',
                          'Barometric pressure', 'Sound noise', 'eTVOC', 'eCO2', 'Discomfort index',
                          'Heat stroke', 'Vibration information', 'SI value', 'PGA', 'Seismic intensity','Altitude'])
 
-    scheduler(1, worker, PORT, CSV_FILE, False)
+    save_frame_camera_key(0, 'data/temp', 'camera_capture',CSV_FILE)
+    print(str_time)
+
 
