@@ -5,7 +5,6 @@
 # Windows 用
 #
 
-
 from cv2 import detail_BestOf2NearestRangeMatcher
 import serial
 import time
@@ -26,12 +25,13 @@ print( u"FCへ接続: %s" % (connection_string) )    # 接続設定文字列を�
 vehicle = connect(connection_string, wait_ready=False)    # 接続
 print(vehicle.mode)
 
+#定数と初期化
 P = 1006
 T = 24.3
 P0 = 1013.25 # ICAO標準大気 海抜0m
 cnt = 50
 interval_time = 1
-filepath = "data/temp"
+filepath = "data/temp/"
 H0 = 0
 DH0 = 0
 
@@ -84,6 +84,8 @@ def print_latest_data(data,csv_file):
     # H = 153.8 * ( T + 273.2) * (1-( P / P0 ) ** 0.190223)
     high = str(H)
     drone_alt = str(DH)
+
+    # 高度の差分を計算
     if H0 == 0:
         H0 = H 
         calc_high =  str(H - H0 )
@@ -116,7 +118,6 @@ def print_latest_data(data,csv_file):
     print("Diff Altitude:" + calc_high)
     print("Drone Altitude:" + drone_alt)
     print("Diff Drone Altitude:" + D_calc_high)
-    # print(data)
 
     # Output CSV
     with open(csv_file, 'a', newline="") as f:
@@ -156,6 +157,7 @@ def save_frame_camera_key(device_num, dir_path, basename,CSV_FILE, ext='jpg', wi
     while True:
         ret, frame = cap.read()
         time_measured = datetime.now().strftime("%Y%m%d-%H%M%S")
+        cv2.putText(frame, time_measured, (10, 30),cv2.FONT_HERSHEY_PLAIN, 1.5,(255, 255, 255), 1, cv2.LINE_AA)
         # cv2.imshow(window_name, frame)
         cv2.imwrite('{}_{}_{}.{}'.format(base_path,time_measured, n, ext), frame)
 
@@ -182,15 +184,13 @@ if __name__ == '__main__':
     
     # 出力するCSVファイル名
     str_time = str(datetime.now().strftime("%Y%m%d-%H%M%S"))
-    CSV_FILE = "data/temp/" + str_time + ".csv"
+    CSV_FILE = filepath + str_time + ".csv"
     with open(CSV_FILE, 'w', newline="") as f:
         writer = csv.writer(f)
         writer.writerow(['Time measured', 'Temperature', 'Relative humidity', 'Ambient light',
                          'Barometric pressure', 'Sound noise', 'eTVOC', 'eCO2', 'Discomfort index',
                          'Heat stroke', 'Vibration information', 'SI value', 'PGA', 'Seismic intensity','Altitude','Diff_alt','Drone_alt','Drone_alt_diff'])
 
-    save_frame_camera_key(0, 'data/temp', 'camera_capture',CSV_FILE)
+    save_frame_camera_key(0, filepath, 'camera_capture',CSV_FILE)
     print(str_time)
     shutil.make_archive('arc_data',format='zip',root_dir=filepath)
-
-
